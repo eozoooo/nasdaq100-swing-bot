@@ -21,16 +21,17 @@ from universe import fetch_from_wikipedia, get_universe  # noqa: E402
 
 NY = "America/New_York"
 SAMPLE = ["AAPL", "NVDA", "MSFT", "AMZN", "COST"]
-results: list[tuple[str, bool, str]] = []
+results: list[tuple[str, str, str]] = []  # (nom, OK/AVERT./ÉCHEC, détail)
 
 
-def check(name: str):
+def check(name: str, critical: bool = True):
+    """critical=False : un échec est signalé mais ne fait pas échouer le test."""
     def deco(fn):
         try:
             detail = fn() or ""
-            results.append((name, True, detail))
+            results.append((name, "OK", detail))
         except Exception as exc:
-            results.append((name, False, f"{type(exc).__name__}: {exc}"))
+            results.append((name, "ÉCHEC" if critical else "AVERT.", f"{type(exc).__name__}: {exc}"))
             traceback.print_exc()
         return fn
     return deco
@@ -42,7 +43,7 @@ daily: dict[str, pd.DataFrame] = {}
 hourly: dict[str, pd.DataFrame] = {}
 
 
-@check("Univers : liste statique vs Wikipedia")
+@check("Univers : liste statique vs Wikipedia", critical=False)
 def _():
     wiki = set(fetch_from_wikipedia())
     static = set(tickers)
@@ -69,8 +70,11 @@ def _():
     last = pd.Timestamp(q.index[-1]).date()
     age = (now.date() - last).days
     assert age <= 5, f"dernière bougie QQQ trop vieille : {last}"
-    short = [t for t, df in daily.items() if len(df) < 260]
-    return f"index tz={q.index.tz}, dernière séance {last}, {len(q)} bougies ; historique court : {short or 'aucun'}"
+    short = {t: f"{len(df)} j depuis {pd.Timestamp(df.index[0]).date()}" for t, df in daily.items() if len(df) < 260}
+    stale = {t: str(pd.Timestamp(df.index[-1]).date()) for t, df in daily.items()
+             if (pd.Timestamp(q.index[-1]) - pd.Timestamp(df.index[-1])).days > 3}
+    return (f"index tz={q.index.tz}, dernière séance {last}, {len(q)} bougies ; "
+            f"historique court : {short or 'aucun'} ; plus cotés (à retirer) : {stale or 'aucun'}")
 
 
 @check("1H : téléchargement + horodatage 9:30..15:30 New York")
@@ -136,9 +140,11 @@ def _():
 
 
 print("\n" + "=" * 70)
-for name, ok, detail in results:
-    print(f"{'OK ' if ok else 'ÉCHEC'} | {name}\n       {detail}")
-failed = [n for n, ok, _ in results if not ok]
+for name, status, detail in results:
+    print(f"{status:<6} | {name}\n       {detail}")
+failed = [n for n, status, _ in results if status == "ÉCHEC"]
+warned = [n for n, status, _ in results if status == "AVERT."]
 print("=" * 70)
-print(f"{len(results) - len(failed)}/{len(results)} vérifications réussies")
+print(f"{len(results) - len(failed) - len(warned)}/{len(results)} vérifications réussies"
+      + (f", {len(warned)} avertissement(s) non bloquant(s)" if warned else ""))
 sys.exit(1 if failed else 0)

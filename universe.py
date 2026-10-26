@@ -28,24 +28,39 @@ NASDAQ100_FALLBACK = [
     "TSLA", "TTWO", "TXN", "VRSK", "VRTX", "WBD", "WDAY", "WDC", "XEL", "ZS",
 ]
 
-WIKI_URL = "https://en.wikipedia.org/wiki/Nasdaq-100"
+# La composition a quitté la page "Nasdaq-100" pour une page dédiée
+WIKI_URLS = [
+    "https://en.wikipedia.org/wiki/List_of_Nasdaq-100_companies",
+    "https://en.wikipedia.org/wiki/Nasdaq-100",
+]
 
 
-def fetch_from_wikipedia(timeout: int = 15) -> list[str]:
-    # Wikipedia refuse les User-Agent génériques : il faut un UA descriptif
-    headers = {"User-Agent": "nasdaq100-swing-bot/1.0 (https://github.com/eozoooo/nasdaq100-swing-bot)"}
-    resp = requests.get(WIKI_URL, timeout=timeout, headers=headers)
-    resp.raise_for_status()
-    tables = pd.read_html(io.StringIO(resp.text))
-    for table in tables:
+def _parse_components(html: str) -> list[str] | None:
+    for table in pd.read_html(io.StringIO(html)):
         if isinstance(table.columns, pd.MultiIndex):
             table.columns = [" ".join(map(str, c)) for c in table.columns]
         for col in table.columns:
             if str(col).strip().lower() in ("ticker", "symbol") and 90 <= len(table) <= 110:
                 tickers = [str(t).strip().replace(".", "-") for t in table[col]]
                 return sorted({t for t in tickers if t and t != "GOOG"})
-    shapes = [(len(t), list(t.columns)[:4]) for t in tables]
-    raise ValueError(f"table Nasdaq-100 introuvable parmi {len(tables)} tables : {shapes}")
+    return None
+
+
+def fetch_from_wikipedia(timeout: int = 15) -> list[str]:
+    # Wikipedia refuse les User-Agent génériques : il faut un UA descriptif
+    headers = {"User-Agent": "nasdaq100-swing-bot/1.0 (https://github.com/eozoooo/nasdaq100-swing-bot)"}
+    errors = []
+    for url in WIKI_URLS:
+        try:
+            resp = requests.get(url, timeout=timeout, headers=headers)
+            resp.raise_for_status()
+            tickers = _parse_components(resp.text)
+            if tickers:
+                return tickers
+            errors.append(f"{url} : aucune table de composition")
+        except Exception as exc:
+            errors.append(f"{url} : {exc}")
+    raise ValueError(" ; ".join(errors))
 
 
 def get_universe(refresh: bool = False) -> list[str]:
