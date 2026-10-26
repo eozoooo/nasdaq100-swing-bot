@@ -1,0 +1,68 @@
+name: Real data test
+
+# Lancement manuel uniquement : Actions > Real data test > Run workflow.
+# Vérifie le bot de bout en bout sur les vraies données Yahoo, sans rien envoyer
+# (sauf l'option "telegram" qui envoie un message de TEST).
+on:
+  workflow_dispatch:
+    inputs:
+      telegram:
+        description: "Envoyer un message Telegram de test"
+        type: boolean
+        default: false
+      backtest_args:
+        description: "Options du backtest"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Unit tests
+        run: python -m pytest -q
+
+      - name: Smoke test on real Yahoo data
+        run: python scripts/smoke_test.py
+
+      - name: Dry-run scan (no message sent)
+        run: python main.py --force --dry-run
+
+      - name: Telegram test message
+        if: ${{ inputs.telegram }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py --test-telegram
+
+      - name: Backtest (2 years)
+        env:
+          BT_ARGS: ${{ inputs.backtest_args }}
+        run: |
+          set -o pipefail
+          python backtest.py $BT_ARGS | tee backtest_summary.txt
+
+      - name: Upload backtest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backtest-results
+          path: |
+            backtest_summary.txt
+            backtest_trades*.csv
+            backtest_trades*.png
+          if-no-files-found: ignore

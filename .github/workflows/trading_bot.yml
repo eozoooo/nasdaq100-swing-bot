@@ -1,0 +1,83 @@
+name: Nasdaq100 Swing Bot
+
+on:
+  schedule:
+    # Le cron GitHub est en UTC et ignore l'heure d'été américaine.
+    # Ouverture 9:30-16:00 New York = 13:30-20:00 UTC (été) / 14:30-21:00 UTC (hiver).
+    # La 1re bougie 1H (9:30-10:30) n'est close qu'à 10:30 New York, donc on
+    # couvre 14:00-21:15 UTC du lundi au vendredi ; market_calendar.py vérifie
+    # l'heure réelle de New York (et les jours fériés) dans le code.
+    - cron: "*/15 14-20 * * 1-5"
+    - cron: "0,15 21 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Ignorer les heures de marché (test)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # nécessaire pour commiter state.json
+
+# Une seule exécution à la fois : évite deux commits concurrents de state.json
+concurrency:
+  group: trading-bot
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Cache Daily : téléchargé une fois par jour, réutilisé par les ~28 exécutions suivantes
+      - name: Date (New York)
+        id: date
+        run: echo "today=$(TZ=America/New_York date +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore daily price cache
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          # clé exacte par jour : sauvegardé par la 1re exécution du jour seulement
+          key: daily-${{ steps.date.outputs.today }}
+
+      - name: Run bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CAPITAL: ${{ vars.CAPITAL || '5000' }}
+          RISK_PER_TRADE: ${{ vars.RISK_PER_TRADE || '0.01' }}
+          MAX_POSITION_PCT: ${{ vars.MAX_POSITION_PCT || '0.25' }}
+          ALLOW_FRACTIONAL: ${{ vars.ALLOW_FRACTIONAL || 'false' }}
+          ALERT_COOLDOWN_DAYS: ${{ vars.ALERT_COOLDOWN_DAYS || '3' }}
+          EARNINGS_BLACKOUT_DAYS: ${{ vars.EARNINGS_BLACKOUT_DAYS || '7' }}
+        run: |
+          if [ "${{ inputs.force }}" = "true" ]; then
+            python main.py --force
+          else
+            python main.py
+          fi
+
+      # Anti-spam : state.json n'est commité que s'il a changé (= alerte envoyée)
+      - name: Persist state.json
+        run: |
+          if ! git diff --quiet -- state.json; then
+            git config user.name  "trading-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add state.json
+            git commit -m "chore: update alert state [skip ci]"
+            for i in 1 2 3; do
+              git pull --rebase --autostash && git push && break
+              sleep $((i * 5))
+            done
+          fi

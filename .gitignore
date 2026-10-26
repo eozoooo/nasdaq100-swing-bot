@@ -1,0 +1,6 @@
+__pycache__/
+.cache/
+*.tmp
+.venv/
+backtest_trades*.csv
+backtest_trades*.png

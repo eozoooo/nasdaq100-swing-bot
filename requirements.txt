@@ -1,0 +1,8 @@
+# yfinance doit rester à jour : Yahoo modifie régulièrement son API
+yfinance>=0.2.54
+pandas>=2.2
+numpy>=1.26
+requests>=2.31
+lxml>=5.0          # pd.read_html pour rafraîchir l'univers depuis Wikipedia
+matplotlib>=3.8    # optionnel : graphique du backtest
+pytest>=8.0        # tests
