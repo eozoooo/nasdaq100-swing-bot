@@ -4,6 +4,8 @@ La composition change (rééquilibrage annuel en décembre + remplacements en
 cours d'année). La liste statique sert de repli ; `get_universe()` tente
 d'abord de la rafraîchir depuis Wikipedia.
 GOOG est volontairement exclu (doublon de GOOGL).
+EA (retiré de la cote le 04/08/2026) et WBD (05/10/2026) ont été retirés ;
+scripts/smoke_test.py signale tout titre qui n'est plus coté.
 """
 from __future__ import annotations
 
@@ -19,17 +21,18 @@ NASDAQ100_FALLBACK = [
     "AAPL", "ABNB", "ADBE", "ADI", "ADP", "ADSK", "AEP", "ALNY", "AMAT", "AMD",
     "AMGN", "AMZN", "APP", "ARM", "ASML", "AVGO", "AXON", "AZN", "BKNG", "BKR",
     "CCEP", "CDNS", "CEG", "CHTR", "CMCSA", "COST", "CPRT", "CRWD", "CSCO", "CSGP",
-    "CSX", "CTAS", "CTSH", "DASH", "DDOG", "DXCM", "EA", "EXC", "FANG", "FAST",
+    "CSX", "CTAS", "CTSH", "DASH", "DDOG", "DXCM", "EXC", "FANG", "FAST",
     "FER", "FTNT", "GEHC", "GILD", "GOOGL", "HON", "IDXX", "INSM", "INTC", "INTU",
     "ISRG", "KDP", "KHC", "KLAC", "LIN", "LRCX", "MAR", "MCHP", "MDLZ", "MELI",
     "META", "MNST", "MPWR", "MRVL", "MSFT", "MSTR", "MU", "NFLX", "NVDA", "NXPI",
     "ODFL", "ORLY", "PANW", "PAYX", "PCAR", "PDD", "PEP", "PLTR", "PYPL", "QCOM",
     "REGN", "ROP", "ROST", "SBUX", "SHOP", "SNPS", "STX", "TEAM", "TMUS", "TRI",
-    "TSLA", "TTWO", "TXN", "VRSK", "VRTX", "WBD", "WDAY", "WDC", "XEL", "ZS",
+    "TSLA", "TTWO", "TXN", "VRSK", "VRTX", "WDAY", "WDC", "XEL", "ZS",
 ]
 
 # La composition a quitté la page "Nasdaq-100" pour une page dédiée
 WIKI_URLS = [
+    "https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies",
     "https://en.wikipedia.org/wiki/List_of_Nasdaq-100_companies",
     "https://en.wikipedia.org/wiki/Nasdaq-100",
 ]
@@ -40,7 +43,8 @@ def _parse_components(html: str) -> list[str] | None:
         if isinstance(table.columns, pd.MultiIndex):
             table.columns = [" ".join(map(str, c)) for c in table.columns]
         for col in table.columns:
-            if str(col).strip().lower() in ("ticker", "symbol") and 90 <= len(table) <= 110:
+            name = str(col).strip().lower()
+            if ("ticker" in name or "symbol" in name) and 90 <= len(table) <= 110:
                 tickers = [str(t).strip().replace(".", "-") for t in table[col]]
                 return sorted({t for t in tickers if t and t != "GOOG"})
     return None

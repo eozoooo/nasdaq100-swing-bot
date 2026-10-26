@@ -13,6 +13,8 @@ import datetime as dt
 import logging
 import sys
 
+import warnings
+
 import pandas as pd
 
 from config import BOT, RISK, STRATEGY
@@ -25,6 +27,8 @@ from state import AlertState
 from strategy import compute_signals, daily_setup_today, describe_signal
 from universe import get_universe
 
+# yfinance émet des centaines d'avertissements de dépréciation pandas, sans impact
+warnings.filterwarnings("ignore", module="yfinance")
 log = logging.getLogger("bot")
 STALE_AFTER = pd.Timedelta(hours=3)  # bougie 1H plus vieille : données en retard ou jour férié
 

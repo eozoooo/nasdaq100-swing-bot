@@ -11,6 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import warnings
+
 import pandas as pd  # noqa: E402
 
 from config import STRATEGY  # noqa: E402
@@ -19,6 +21,8 @@ from fundamentals import check_fundamentals, historical_earnings_dates  # noqa: 
 from strategy import compute_signals, daily_features  # noqa: E402
 from universe import fetch_from_wikipedia, get_universe  # noqa: E402
 
+# yfinance émet des centaines d'avertissements de dépréciation pandas, sans impact
+warnings.filterwarnings("ignore", module="yfinance")
 NY = "America/New_York"
 SAMPLE = ["AAPL", "NVDA", "MSFT", "AMZN", "COST"]
 results: list[tuple[str, str, str]] = []  # (nom, OK/AVERT./ÉCHEC, détail)

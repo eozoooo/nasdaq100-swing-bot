@@ -26,6 +26,8 @@ import math
 from dataclasses import dataclass, field, fields
 
 import numpy as np
+import warnings
+
 import pandas as pd
 
 from config import RISK, STRATEGY, RiskParams, StrategyParams
@@ -33,6 +35,8 @@ from data import NY_TZ, download_batch
 from strategy import compute_signals
 from universe import get_universe
 
+# yfinance émet des centaines d'avertissements de dépréciation pandas, sans impact
+warnings.filterwarnings("ignore", module="yfinance")
 log = logging.getLogger("backtest")
 BARS_PER_DAY = 7  # 9:30, 10:30, ..., 15:30
 
