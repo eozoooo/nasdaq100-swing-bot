@@ -225,6 +225,7 @@ def test_main_end_to_end(monkeypatch, tmp_path, market):
 
     monkeypatch.setattr(bot.dt, "datetime", FrozenDT)
     monkeypatch.setattr(bot, "get_universe", lambda refresh=False: ["SYN"])
+    monkeypatch.setattr(bot, "cached_universe", lambda *a, **k: None)
     monkeypatch.setattr(bot, "load_daily_cached", lambda *a, **k: {"SYN": d_cut, "QQQ": q[q.index.date < session]})
     monkeypatch.setattr(bot, "download_batch", lambda *a, **k: {"SYN": h_cut})
     monkeypatch.setattr(bot, "check_fundamentals", lambda t, today=None: FundamentalCheck(ticker=t, name="Synth"))
@@ -248,3 +249,16 @@ def test_daily_cache_not_written_when_download_degraded(monkeypatch, tmp_path):
     cache = tmp_path / "daily.pkl"
     assert data.load_daily_cached(["AAA", "BBB"], str(cache), "2y", now) == {}
     assert not cache.exists()
+
+
+def test_cached_universe_roundtrip(tmp_path):
+    import pickle
+
+    import data
+
+    now = dt.datetime(2026, 10, 23, 15, tzinfo=UTC)
+    cache = tmp_path / "daily.pkl"
+    assert data.cached_universe(str(cache), now) is None
+    cache.write_bytes(pickle.dumps({"date": "2026-10-23", "data": {"AAA": 1, "QQQ": 1}, "missing": ["BBB"]}))
+    assert data.cached_universe(str(cache), now) == ["AAA", "BBB", "QQQ"]
+    assert data.cached_universe(str(cache), now + dt.timedelta(days=1)) is None

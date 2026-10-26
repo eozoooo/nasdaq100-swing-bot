@@ -235,7 +235,7 @@ def main() -> None:
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-    tickers = args.tickers or get_universe()
+    tickers = args.tickers or get_universe(refresh=True)
     regime = STRATEGY.regime_ticker
     end = dt.date.today() + dt.timedelta(days=1)
     h_start = end - dt.timedelta(days=729)

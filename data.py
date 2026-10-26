@@ -102,6 +102,22 @@ def drop_today_daily(df: pd.DataFrame, now: dt.datetime | None = None) -> pd.Dat
     return df[dates < today_ny]
 
 
+def cached_universe(cache_file: str, now: dt.datetime) -> list[str] | None:
+    """Tickers du cache Daily s'il date d'aujourd'hui, sinon None."""
+    path = Path(cache_file)
+    if not path.exists():
+        return None
+    today = pd.Timestamp(now).tz_convert(NY_TZ).date().isoformat()
+    try:
+        with path.open("rb") as fh:
+            cached = pickle.load(fh)
+    except Exception:
+        return None
+    if cached.get("date") != today:
+        return None
+    return sorted(set(cached["data"]) | set(cached.get("missing", [])))
+
+
 def load_daily_cached(tickers: list[str], cache_file: str, period: str, now: dt.datetime) -> dict[str, pd.DataFrame]:
     """Daily téléchargé une seule fois par jour de bourse."""
     path = Path(cache_file)

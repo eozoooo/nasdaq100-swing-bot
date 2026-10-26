@@ -18,7 +18,7 @@ import warnings
 import pandas as pd
 
 from config import BOT, RISK, STRATEGY
-from data import download_batch, drop_incomplete_hourly, load_daily_cached
+from data import cached_universe, download_batch, drop_incomplete_hourly, load_daily_cached
 from fundamentals import check_fundamentals
 from market_calendar import NY, is_market_open
 from notifier import format_signal, send_telegram
@@ -39,8 +39,10 @@ def run(force: bool = False, dry_run: bool = False, refresh_universe: bool = Fal
         log.info("Marché fermé (%s heure de New York) : rien à faire", now.astimezone(NY).strftime("%a %H:%M"))
         return 0
 
-    tickers = get_universe(refresh=refresh_universe)
+    # Composition relue sur Wikipedia une fois par jour, puis reprise du cache Daily
     regime = STRATEGY.regime_ticker
+    cached = None if refresh_universe else cached_universe(BOT.daily_cache_file, now)
+    tickers = [t for t in cached if t != regime] if cached else get_universe(refresh=True)
     daily = load_daily_cached(tickers + [regime], BOT.daily_cache_file, BOT.daily_period, now)
     if regime not in daily:
         log.error("Données %s indisponibles : abandon", regime)

@@ -4,8 +4,8 @@ La composition change (rééquilibrage annuel en décembre + remplacements en
 cours d'année). La liste statique sert de repli ; `get_universe()` tente
 d'abord de la rafraîchir depuis Wikipedia.
 GOOG est volontairement exclu (doublon de GOOGL).
-EA (retiré de la cote le 04/08/2026) et WBD (05/10/2026) ont été retirés ;
-scripts/smoke_test.py signale tout titre qui n'est plus coté.
+Liste statique alignée sur Wikipedia le 26/10/2026. En production, main.py
+rafraîchit la composition une fois par jour (au 1er passage de la journée).
 """
 from __future__ import annotations
 
@@ -18,16 +18,16 @@ import requests
 log = logging.getLogger(__name__)
 
 NASDAQ100_FALLBACK = [
-    "AAPL", "ABNB", "ADBE", "ADI", "ADP", "ADSK", "AEP", "ALNY", "AMAT", "AMD",
-    "AMGN", "AMZN", "APP", "ARM", "ASML", "AVGO", "AXON", "AZN", "BKNG", "BKR",
-    "CCEP", "CDNS", "CEG", "CHTR", "CMCSA", "COST", "CPRT", "CRWD", "CSCO", "CSGP",
-    "CSX", "CTAS", "CTSH", "DASH", "DDOG", "DXCM", "EXC", "FANG", "FAST",
-    "FER", "FTNT", "GEHC", "GILD", "GOOGL", "HON", "IDXX", "INSM", "INTC", "INTU",
-    "ISRG", "KDP", "KHC", "KLAC", "LIN", "LRCX", "MAR", "MCHP", "MDLZ", "MELI",
-    "META", "MNST", "MPWR", "MRVL", "MSFT", "MSTR", "MU", "NFLX", "NVDA", "NXPI",
-    "ODFL", "ORLY", "PANW", "PAYX", "PCAR", "PDD", "PEP", "PLTR", "PYPL", "QCOM",
-    "REGN", "ROP", "ROST", "SBUX", "SHOP", "SNPS", "STX", "TEAM", "TMUS", "TRI",
-    "TSLA", "TTWO", "TXN", "VRSK", "VRTX", "WDAY", "WDC", "XEL", "ZS",
+    "AAPL", "ABNB", "ADBE", "ADI", "ADP", "ADSK", "AEP", "ALAB", "ALNY", "AMAT",
+    "AMD", "AMGN", "AMZN", "APP", "ARM", "ASML", "AVGO", "AXON", "BKNG", "BKR",
+    "CCEP", "CDNS", "CEG", "CMCSA", "COST", "CPRT", "CRWD", "CRWV", "CSCO", "CSX",
+    "CTAS", "DASH", "DDOG", "DXCM", "EXC", "FANG", "FAST", "FER", "FTNT", "GEHC",
+    "GILD", "GOOGL", "HON", "HONA", "IDXX", "INTC", "INTU", "ISRG", "KDP", "KLAC",
+    "LIN", "LITE", "LRCX", "MAR", "MCHP", "MDLZ", "MELI", "META", "MNST", "MPWR",
+    "MRNA", "MRVL", "MSFT", "MSTR", "MU", "NBIS", "NFLX", "NVDA", "NXPI", "ODFL",
+    "ORLY", "PANW", "PAYX", "PCAR", "PDD", "PEP", "PLTR", "PYPL", "QCOM", "REGN",
+    "RKLB", "ROP", "ROST", "SBUX", "SHOP", "SNDK", "SNPS", "SPCX", "STX", "TER",
+    "TMUS", "TRI", "TSLA", "TTWO", "TXN", "VRTX", "WDAY", "WDC", "WMT", "XEL",
 ]
 
 # La composition a quitté la page "Nasdaq-100" pour une page dédiée
