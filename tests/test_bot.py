@@ -287,3 +287,15 @@ def test_adx_range(market):
     d, _, _ = market
     a = adx(d).dropna()
     assert len(a) and a.between(0, 100).all()
+
+
+def test_earnings_exit_line():
+    import datetime as dt
+    from fundamentals import FundamentalCheck
+    from notifier import earnings_exit_line
+
+    # résultats un lundi -> clôturer le vendredi
+    f = FundamentalCheck(ticker="X", next_earnings=dt.date(2026, 11, 9), days_to_earnings=10)
+    assert earnings_exit_line(f) == "⚠️ Clôturer avant les résultats du 09/11 : au plus tard à la clôture du 06/11."
+    assert earnings_exit_line(FundamentalCheck(ticker="X", next_earnings=dt.date(2027, 1, 30), days_to_earnings=60)) is None
+    assert earnings_exit_line(FundamentalCheck(ticker="X")) is None

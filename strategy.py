@@ -155,12 +155,16 @@ def compute_signals(
     return x
 
 
-def describe_signal(row: pd.Series) -> list[str]:
+def describe_signal(row: pd.Series, p: StrategyParams = STRATEGY) -> list[str]:
     """Raisons lisibles du déclenchement (texte brut, échappé par le notifier)."""
-    return [
+    regime = "QQQ > SMA50 et SMA200" if p.regime_qqq_sma50 else "QQQ > SMA200"
+    lines = [
         f"Tendance D : cours {row['d_close']:.2f} > SMA50 {row['sma50']:.2f} > SMA200 {row['sma200']:.2f} (SMA200 haussière)",
         f"Repli D vers EMA20 ({row['ema20']:.2f}) sur les 5 dernières séances, RSI(D) {row['rsi_d']:.0f}",
-        f"Force relative 3 mois : {row['ret_rs'] * 100:+.1f} % (bat le QQQ), QQQ > SMA200",
+        f"Force relative 3 mois : {row['ret_rs'] * 100:+.1f} % (bat le QQQ), {regime}",
         f"Déclencheur 1H : croisement MACD haussier (hist {row['macd_hist']:+.3f}), clôture > EMA20 1H ({row['ema20_h']:.2f})",
         f"RSI(1H) {row['rsi_h']:.0f}, volume x{row['vol_ratio']:.1f} vs même créneau, sous la bande de Bollinger haute ({row['bb_up']:.2f})",
     ]
+    if p.adx_min > 0 and "adx_d" in row and pd.notna(row["adx_d"]):
+        lines.insert(1, f"Tendance forte : ADX(D) {row['adx_d']:.0f} (minimum {p.adx_min:g})")
+    return lines

@@ -84,7 +84,7 @@ def run(force: bool = False, dry_run: bool = False, refresh_universe: bool = Fal
             continue
         plan = build_trade_plan(entry=float(row["close"]), stop=float(row["stop"]))
         bar_time = ts.tz_convert(NY).strftime("%d/%m %H:%M ET")
-        msg = format_signal(t, plan, describe_signal(row), fund, bar_time, RISK.capital)
+        msg = format_signal(t, plan, describe_signal(row, STRATEGY), fund, bar_time, RISK.capital)
         if dry_run:
             print(msg, "\n" + "-" * 40)
             continue

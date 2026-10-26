@@ -1,6 +1,7 @@
 """Envoi des signaux sur Telegram (parse_mode HTML, plus robuste que Markdown)."""
 from __future__ import annotations
 
+import datetime as dt
 import html
 import logging
 import os
@@ -8,6 +9,7 @@ import time
 
 import requests
 
+from config import STRATEGY
 from fundamentals import FundamentalCheck
 from risk_manager import TradePlan
 
@@ -17,6 +19,17 @@ API = "https://api.telegram.org/bot{token}/sendMessage"
 
 def _e(text: object) -> str:
     return html.escape(str(text), quote=False)
+
+
+def earnings_exit_line(fundamentals: FundamentalCheck, max_days: int = STRATEGY.max_holding_days) -> str | None:
+    """Rappel de sortie si les résultats tombent avant le stop temporel (règle validée en backtest)."""
+    nxt, days = fundamentals.next_earnings, fundamentals.days_to_earnings
+    if not STRATEGY.exit_before_earnings or nxt is None or days is None or days > max_days * 7 / 5 + 2:
+        return None
+    eve = nxt - dt.timedelta(days=1)
+    while eve.weekday() >= 5:  # veille ouvrée
+        eve -= dt.timedelta(days=1)
+    return f"⚠️ Clôturer avant les résultats du {nxt:%d/%m} : au plus tard à la clôture du {eve:%d/%m}."
 
 
 def format_signal(
@@ -42,7 +55,8 @@ def format_signal(
         f"<code>Stop     {plan.stop:>9.2f} $  ({plan.stop_pct:+.1f} %)</code>",
         f"<code>TP1      {plan.tp1:>9.2f} $  ({plan.tp1_pct:+.1f} %)  R/R 1:{plan.rr_tp1:g}</code>",
         f"<code>TP2      {plan.tp2:>9.2f} $  ({plan.tp2_pct:+.1f} %)  R/R 1:{plan.rr_tp2:g}</code>",
-        "<i>Vendre 50 % à TP1 puis remonter le stop au prix d'entrée. Sortie forcée après 15 séances.</i>",
+        f"<i>Vendre 50 % à TP1 puis remonter le stop au prix d'entrée. Sortie forcée après {STRATEGY.max_holding_days} séances.</i>",
+        *([f"<b>{_e(x)}</b>"] if (x := earnings_exit_line(fundamentals)) else []),
         "",
         "<b>💰 Sizing</b>",
         f"<code>Quantité {plan.shares:g} actions</code>",

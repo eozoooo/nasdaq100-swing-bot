@@ -32,6 +32,8 @@ from universe import get_universe  # noqa: E402
 warnings.filterwarnings("ignore", module="yfinance")
 log = logging.getLogger("variants")
 
+# Référence = stratégie d'origine, sans aucun des trois filtres (indépendante des défauts de config.py)
+BASE = {"exit_before_earnings": False, "adx_min": 0.0, "regime_qqq_sma50": False}
 VARIANTS = {
     "V0 référence": {},
     "V1 sortie avant résultats": {"exit_before_earnings": True},
@@ -67,7 +69,7 @@ def main() -> None:
 
     rows = []
     for name, overrides in VARIANTS.items():
-        p = dataclasses.replace(STRATEGY, **overrides)
+        p = dataclasses.replace(STRATEGY, **{**BASE, **overrides})
         trades = []
         for t in tickers:
             if t not in daily or t not in hourly or len(hourly[t]) < 200:

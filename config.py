@@ -58,10 +58,10 @@ class StrategyParams:
     tp1_fraction: float = 0.5
     max_holding_days: int = 15   # stop temporel (séances)
 
-    # --- Variantes testées par scripts/variants.py (désactivées par défaut) ---
-    adx_min: float = 0.0               # > 0 : exige ADX(14) Daily >= adx_min
-    regime_qqq_sma50: bool = False     # régime plus strict : QQQ > SMA50 en plus de SMA200
-    exit_before_earnings: bool = False # sortie à la clôture de la veille des résultats
+    # --- Filtres retenus par scripts/variants.py (V4, validée hors échantillon le 26/10/2026) ---
+    adx_min: float = 20.0              # > 0 : exige ADX(14) Daily >= adx_min (0 = désactivé)
+    regime_qqq_sma50: bool = True      # régime plus strict : QQQ > SMA50 en plus de SMA200
+    exit_before_earnings: bool = True  # sortie à la clôture de la veille des résultats
 
 
 @dataclass(frozen=True)

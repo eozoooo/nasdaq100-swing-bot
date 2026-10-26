@@ -19,6 +19,7 @@ Toutes les conditions Daily utilisent la **clôture de la veille** (pas de regar
 | # | Règle | Rôle |
 |---|---|---|
 | R1 | `QQQ_close > SMA200(QQQ)` | Ne pas acheter de swing long dans un marché baissier |
+| R2 | `QQQ_close > SMA50(QQQ)` | Pas d'achat pendant les corrections de l'indice (ajouté après validation hors échantillon) |
 
 ### Filtre de tendance Daily (1D)
 | # | Règle | Rôle |
@@ -28,6 +29,7 @@ Toutes les conditions Daily utilisent la **clôture de la veille** (pas de regar
 | D3 | `min(Low, 5 dernières séances) ≤ EMA20 + 0,5 × ATR14` | Il y a eu un **repli** récent : on n'achète pas en extension |
 | D4 | `40 ≤ RSI14(D) ≤ 70` | Ni cassé, ni suracheté |
 | D5 | `Perf 63 j (titre) > Perf 63 j (QQQ)` | Force relative : on prend les leaders de l'indice |
+| D6 | `ADX14(D) ≥ 20` | Tendance réelle, pas un range (ajouté après validation hors échantillon) |
 
 ### Déclencheur Intraday (1H)
 | # | Règle | Rôle |
@@ -65,6 +67,7 @@ R   = entrée − stop
 TP1 = entrée + 2R  -> vendre 50 %, stop remonté au prix d'entrée
 TP2 = entrée + 3R  -> vendre le solde
 Stop temporel : sortie après 15 séances si rien n'est touché
+Résultats   : sortie à la clôture de la veille de la publication (rappel dans le message Telegram)
 ```
 Un gagnant complet rapporte 0,5 × 2R + 0,5 × 3R = **+2,5R**. Un perdant coûte **−1R**. Le taux de réussite d'équilibre est donc d'environ **1 / (1 + 2,5) ≈ 29 %**. Tout ce qui est au-dessus (après frais) est de l'espérance positive.
 
@@ -97,4 +100,4 @@ Avec 5 000 $, le plafond de 25 % s'active souvent sur les stops serrés : le ris
 - Commencez à **0,5 % de risque** par trade pendant 1 à 2 mois (paper trading ou petites tailles), et comparez les signaux reçus au backtest.
 - Plafond de risque global : pas plus de 5 positions et pas plus de 5 % du capital à risque en même temps.
 - Notez chaque signal suivi ou ignoré (et pourquoi) : c'est la seule façon de savoir si l'écart vient de la stratégie ou de l'exécution.
-- Un indicateur Bollinger "squeeze" ou ADX > 20 en Daily peut aider à filtrer les ranges : c'est la première amélioration à tester, une seule variable à la fois.
+- Les règles R2, D6 et la sortie avant résultats viennent de `scripts/variants.py` (26/10/2026) : 4 variantes fixées à l'avance, comparées sur l'année 1 puis vérifiées sur l'année 2. Seule la combinaison des trois battait la référence sur les deux années (année 1 : PF 1,61 contre 1,59 ; année 2 : PF 1,55 contre 1,43, drawdown −4,5 % contre −13,1 %). Le gain de l'année 1 est minime : l'apport principal est un drawdown plus faible, au prix de moins de trades. Pour revenir à la version d'origine : `adx_min=0`, `regime_qqq_sma50=False`, `exit_before_earnings=False` dans `config.py`.
