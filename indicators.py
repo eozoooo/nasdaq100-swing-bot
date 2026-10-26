@@ -43,6 +43,19 @@ def atr(df: pd.DataFrame, period: int = 14) -> pd.Series:
     return true_range(df).ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
 
 
+def adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
+    """ADX de Wilder : force de la tendance (direction ignorée)."""
+    up = df["High"].diff()
+    down = -df["Low"].diff()
+    plus_dm = up.where((up > down) & (up > 0), 0.0)
+    minus_dm = down.where((down > up) & (down > 0), 0.0)
+    tr = true_range(df).ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    plus_di = 100 * plus_dm.ewm(alpha=1 / period, adjust=False, min_periods=period).mean() / tr
+    minus_di = 100 * minus_dm.ewm(alpha=1 / period, adjust=False, min_periods=period).mean() / tr
+    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+    return dx.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+
+
 def bollinger(close: pd.Series, period: int = 20, n_std: float = 2.0) -> pd.DataFrame:
     mid = sma(close, period)
     std = close.rolling(period, min_periods=period).std(ddof=0)

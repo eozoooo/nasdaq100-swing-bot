@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from config import STRATEGY, StrategyParams
-from indicators import atr, bollinger, ema, macd, rsi, sma
+from indicators import adx, atr, bollinger, ema, macd, rsi, sma
 
 NY_TZ = "America/New_York"
 
@@ -26,7 +26,7 @@ def market_regime(qqq_daily: pd.DataFrame, p: StrategyParams = STRATEGY) -> pd.D
     sma200 = sma(close, p.sma_trend)
     return pd.DataFrame(
         {
-            "regime_ok": close > sma200,
+            "regime_ok": (close > sma200) & ((close > sma(close, p.sma_mid)) if p.regime_qqq_sma50 else True),
             "qqq_ret_rs": close.pct_change(p.rs_lookback),
         },
         index=qqq_daily.index,
@@ -59,6 +59,9 @@ def daily_features(daily: pd.DataFrame, qqq_daily: pd.DataFrame, p: StrategyPara
     f["rsi_d_ok"] = f["rsi_d"].between(p.daily_rsi_min, p.daily_rsi_max)
 
     f["daily_ok"] = f["regime_ok"] & f["trend_ok"] & f["pullback_ok"] & f["rsi_d_ok"] & f["rs_ok"]
+    if p.adx_min > 0:
+        f["adx_d"] = adx(daily, 14)
+        f["daily_ok"] &= f["adx_d"] >= p.adx_min
     return f
 
 

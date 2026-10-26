@@ -262,3 +262,28 @@ def test_cached_universe_roundtrip(tmp_path):
     cache.write_bytes(pickle.dumps({"date": "2026-10-23", "data": {"AAA": 1, "QQQ": 1}, "missing": ["BBB"]}))
     assert data.cached_universe(str(cache), now) == ["AAA", "BBB", "QQQ"]
     assert data.cached_universe(str(cache), now + dt.timedelta(days=1)) is None
+
+
+def test_exit_before_earnings():
+    import dataclasses
+
+    from config import STRATEGY
+
+    idx = pd.DatetimeIndex(
+        [pd.Timestamp(f"2026-01-{d:02d} {s}", tz="America/New_York") for d in (5, 6, 7) for s in ("09:30", "15:30")]
+    )
+    flat = [100.0] * len(idx)
+    h = pd.DataFrame({"Open": flat, "High": flat, "Low": flat, "Close": flat, "Volume": 1}, index=idx)
+    sig = pd.DataFrame({"signal": [True] + [False] * 5, "stop": [95.0] + [np.nan] * 5}, index=idx)
+    p = dataclasses.replace(STRATEGY, exit_before_earnings=True)
+    (tr,) = backtest.simulate_ticker("X", sig, h, p=p, slippage=0, earnings=[dt.date(2026, 1, 7)], blackout_days=0)
+    assert tr.exit_reason == "earnings"
+    assert tr.exit_time == idx[3]  # dernière bougie du 06/01, veille des résultats
+
+
+def test_adx_range(market):
+    from indicators import adx
+
+    d, _, _ = market
+    a = adx(d).dropna()
+    assert len(a) and a.between(0, 100).all()

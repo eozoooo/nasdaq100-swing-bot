@@ -102,6 +102,11 @@ def simulate_ticker(
             i += 1
             continue
         tp1, tp2 = entry + p.tp1_r * risk, entry + p.tp2_r * risk
+        exit_date = None  # sortie avant publication : 1re séance >= date de résultats
+        if p.exit_before_earnings and len(earn):
+            nxt = earn[earn > np.datetime64(sessions[i], "D")]
+            exit_date = nxt[0] if len(nxt) else None
+        earnings_exit = False
         remaining, realized = 1.0, 0.0
         cur_stop, tp1_hit = stop, False
         reason, j = "time", i
@@ -127,10 +132,16 @@ def simulate_ticker(
                 reason = "tp2"
                 break
             marks.append(realized + remaining * (closes[j] - entry))
-        if remaining > 0:  # stop temporel ou fin des données
+            if exit_date is not None and j + 1 < n and np.datetime64(sessions[j + 1], "D") >= exit_date:
+                earnings_exit = True
+                break
+        if remaining > 0:  # stop temporel, résultats ou fin des données
             px = closes[j] * (1 - slippage)
             realized += remaining * (px - entry)
-            reason = "tp1+time" if tp1_hit else ("time" if j < n - 1 else "open_at_end")
+            if earnings_exit:
+                reason = "earnings"
+            else:
+                reason = "tp1+time" if tp1_hit else ("time" if j < n - 1 else "open_at_end")
             marks = marks[:-1]
         marks.append(realized)
         path = pd.Series(marks, index=idx[j - len(marks) + 1 : j + 1])
