@@ -32,13 +32,20 @@ WIKI_URL = "https://en.wikipedia.org/wiki/Nasdaq-100"
 
 
 def fetch_from_wikipedia(timeout: int = 15) -> list[str]:
-    html = requests.get(WIKI_URL, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"}).text
-    for table in pd.read_html(io.StringIO(html)):
-        for col in ("Ticker", "Symbol"):
-            if col in table.columns and 90 <= len(table) <= 110:
+    # Wikipedia refuse les User-Agent génériques : il faut un UA descriptif
+    headers = {"User-Agent": "nasdaq100-swing-bot/1.0 (https://github.com/eozoooo/nasdaq100-swing-bot)"}
+    resp = requests.get(WIKI_URL, timeout=timeout, headers=headers)
+    resp.raise_for_status()
+    tables = pd.read_html(io.StringIO(resp.text))
+    for table in tables:
+        if isinstance(table.columns, pd.MultiIndex):
+            table.columns = [" ".join(map(str, c)) for c in table.columns]
+        for col in table.columns:
+            if str(col).strip().lower() in ("ticker", "symbol") and 90 <= len(table) <= 110:
                 tickers = [str(t).strip().replace(".", "-") for t in table[col]]
                 return sorted({t for t in tickers if t and t != "GOOG"})
-    raise ValueError("table Nasdaq-100 introuvable")
+    shapes = [(len(t), list(t.columns)[:4]) for t in tables]
+    raise ValueError(f"table Nasdaq-100 introuvable parmi {len(tables)} tables : {shapes}")
 
 
 def get_universe(refresh: bool = False) -> list[str]:
